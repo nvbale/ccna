@@ -1,0 +1,384 @@
+
+[CONFIGURACIÓN BÁSICA]
+
+///RtWAN///
+enable
+conf t
+hostname RtWAN
+banner motd #EQUIPO DE ACCESO RESTRINGIDO#
+no ip domain-lookup
+line con 0
+password cisco
+login
+exit
+line vty 0 4
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption
+end
+wr
+
+///SwWan///
+enable
+conf t
+hostname SwWAN
+banner motd #EQUIPO DE ACCESO RESTRINGIDO#
+no ip domain-lookup
+line con 0
+password cisco
+login
+exit
+line vty 0 15
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption
+end
+wr
+
+///R1///
+enable
+conf t
+hostname R1
+banner motd #EQUIPO DE ACCESO RESTRINGIDO#
+no ip domain-lookup
+line con 0
+password cisco
+login
+exit
+line vty 0 4
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption
+end
+wr
+
+///R2///
+enable
+conf t
+hostname R2
+banner motd #EQUIPO DE ACCESO RESTRINGIDO#
+no ip domain-lookup
+line con 0
+password cisco
+login
+exit
+line vty 0 4
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption
+end
+wr
+
+///Sw1///
+enable
+conf t
+hostname Sw1
+banner motd #EQUIPO DE ACCESO RESTRINGIDO#
+no ip domain-lookup
+line con 0
+password cisco
+login
+exit
+line vty 0 15
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption
+end
+wr
+
+///Sw2///
+enable
+conf t
+hostname Sw2
+banner motd #EQUIPO DE ACCESO RESTRINGIDO#
+no ip domain-lookup
+line con 0
+password cisco
+login
+exit
+line vty 0 15
+password cisco
+login
+exit
+enable secret cisco
+service password-encryption
+end
+wr
+
+[VTP]
+
+1. Troncales:
+
+///SwWAN///
+ena
+conf t
+int f0/1
+switchport mode trunk
+end
+wr
+
+///Sw1,2///
+ena
+conf t
+int g0/1
+switchport mode trunk
+end
+wr
+
+4. Crear VLANs
+
+///SwWan///
+ena
+conf t
+vlan 100
+name VLAN100
+vlan 200
+name VLAN200
+end
+wr
+
+///Sw1///
+ena
+conf t
+vlan 10
+name VLAN10
+vlan 15
+name VLAN15
+end
+wr
+
+///Sw2///
+ena
+conf t
+vlan 20
+name VLAN20
+vlan 25
+name VLAN25
+end
+wr
+
+[VLAN de ACCESO]
+
+///SwWan///
+ena
+conf t
+int g0/2
+switchport mode access
+switchport access vlan 100
+int g0/1
+switchport mode access
+switchport access vlan 200
+end
+wr
+
+///Sw1///
+ena
+conf t
+int f0/1
+switchport mode access
+switchport access vlan 10
+int f0/2
+switchport mode access
+switchport access vlan 15
+end
+wr
+
+///Sw1///
+ena
+conf t
+int f0/1
+switchport mode access
+switchport access vlan 20
+int f0/2
+switchport mode access
+switchport access vlan 25
+end
+wr
+
+[R-O-A-S]
+
+///R1///
+ena
+conf t
+int g0/1
+no ip address
+no shutdown
+int g0/1.10
+encapsulation dot1q 10
+ip address 172.16.10.1 255.255.255.0
+description Conecta con VLAN 10
+int g0/1.15
+encapsulation dot1q 15
+ip address 172.16.15.1 255.255.255.0
+description Conecta con VLAN 15
+int g0/0
+ip address 201.165.1.2 255.255.255.0
+description Conecta con VLAN 100
+no shutdown
+end
+wr
+
+///R2///
+ena
+conf t
+int g0/1
+no ip address
+no shutdown
+int g0/1.20
+encapsulation dot1q 20
+ip address 172.16.20.1 255.255.255.0
+description Conecta con VLAN 20
+int g0/1.25
+encapsulation dot1q 25
+ip address 172.16.25.1 255.255.255.0
+description Conecta con VLAN 25
+int g0/0
+ip address 201.165.2.2 255.255.255.0
+description Conecta con VLAN 200
+no shutdown
+end
+wr
+
+///RtWAN///
+ena
+conf t
+int g0/0
+no ip address
+no shutdown
+int g0/0.100
+encapsulation dot1q 100
+ip address 201.165.1.1 255.255.255.0
+description Conecta con VLAN 100
+int g0/0.200
+encapsulation dot1q 200
+ip address 201.165.2.1 255.255.255.0
+description Conecta con VLAN 200
+end
+wr
+
+[OSPF]
+
+///R1///
+ena
+conf t
+router ospf 10
+router-id 1.1.1.1
+network 172.16.10.0 0.0.0.255 area 0
+network 172.16.15.0 0.0.0.255 area 0
+network 201.165.1.0 0.0.0.255 area 0
+passive-interface g0/1
+end
+wr
+
+///R2///
+ena
+conf t
+router ospf 10
+router-id 2.2.2.2
+network 172.16.20.0 0.0.0.255 area 0
+network 172.16.25.0 0.0.0.255 area 0
+network 201.165.2.0 0.0.0.255 area 0
+passive-interface g0/1
+end
+wr
+
+///RtWAN///
+ena
+conf t
+router ospf 10
+router-id 3.3.3.3
+network 201.165.1.0 0.0.0.255 area 0
+network 201.165.2.0 0.0.0.255 area 0
+end
+wr
+
+[ACLs]
+
+///R1///
+ena
+conf t
+ip access-list standard ACL_BLOQUEO
+deny 172.16.10.0 0.0.0.255
+permit any
+exit
+int g0/0
+ip access-group ACL_BLOQUEO out
+end
+wr
+
+///R2///
+ena
+conf t
+ip access-list standard ACL_BLOQUEO
+deny 172.16.20.0 0.0.0.255
+permit any
+exit
+int g0/0
+ip access-group ACL_BLOQUEO out
+end
+wr
+
+
+[NAT]
+
+///R1///
+ena
+conf t
+ip nat pool NAT_POOL 201.165.1.5 201.165.1.5 netmask 255.255.255.0
+ip access-list standard NAT_INTERNO
+permit 172.16.10.0 0.0.0.255
+exit
+ip nat inside source list NAT_INTERNO pool NAT_POOL overload
+int g0/1.10
+ip nat inside
+int g0/0
+ip nat outside
+end
+wr
+
+///R2///
+ena
+conf t
+ip nat pool NAT_POOL 201.165.2.5 201.165.2.5 netmask 255.255.255.0
+ip access-list standard NAT_INTERNO
+permit 172.16.20.0 0.0.0.255
+exit
+ip nat inside source list NAT_INTERNO pool NAT_POOL overload
+int g0/1.20
+ip nat inside
+int g0/0
+ip nat outside
+end
+wr
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!DEL PASS!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!
+
+enable
+conf t
+no enable secret
+line con 0
+no password
+end
+wr
+
+enable
+conf t
+enable secret cisco
+line con 0
+password cisco
+end
+wr
